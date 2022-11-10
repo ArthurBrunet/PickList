@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Drag and Drop</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <template id="item">
+        <li draggable="true">
+            <p class="title"></p>
+            <p class="description"></p>
+            <p class="status"></p>
+            <input type="button" class="btn" value="click me for select">
+        </li>
+    </template>
+
+    <template id="item-responsive">
+        <li>
+            <input type="checkbox">
+            <p class="title"></p>
+            <p class="description"></p>
+            <p class="status"></p>
+        </li>
+    </template>
+
+    <template id="picklist">
+        <section>
+            <div class="item-responsive">
+                <header>
+                    <h2></h2>
+                </header>
+                <input type="text" class="filter">
+                <ul></ul>
+            </div>
+            <div class="item">
+                <header>
+                    <h2></h2>
+                </header>
+                <input type="button" class="btn" value="submit">
+                <input type="text" class="filter">
+                <ul></ul>
+            </div>
+        </section>
+    </template>
+
+    <div id="app"></div>
+
+    <script src="dist/index.js"></script>
+</body>
+</html>
