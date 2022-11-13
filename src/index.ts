@@ -1,5 +1,16 @@
 type Listener<T> = (items: T[]) => void;
 
+interface Draggable {
+    dragStartHandler(event: DragEvent): void;
+    dragEndHandler(event: DragEvent): void;
+}
+
+interface DragTarget {
+    dragOverHandler(event: DragEvent): void;
+    dropHandler(event: DragEvent): void;
+    dragLeaveHandler(event: DragEvent): void;
+}
+
 abstract class Component<T extends HTMLElement, U extends HTMLElement> {
     templateElem: HTMLTemplateElement;
     renderElem: T;
@@ -133,7 +144,7 @@ class Item {
     }
 }
 
-class ItemRender extends Component<HTMLUListElement, HTMLLIElement> {
+class ItemRender extends Component<HTMLUListElement, HTMLLIElement> implements Draggable {
     private isResponsive: boolean;
     private item: Item;
     private preSelected: boolean;
@@ -149,16 +160,26 @@ class ItemRender extends Component<HTMLUListElement, HTMLLIElement> {
         this.configure();
     }
 
+    dragStartHandler = (event: DragEvent) => {
+        event.dataTransfer!.setData('text/plain', this.item.id.toString());
+        event.dataTransfer!.effectAllowed = 'move';
+    }
+    dragEndHandler = (_: DragEvent) => {
+        console.log("dragEnd");
+    }
+
     configure() {
         if (this.isResponsive) {
             this.element.querySelector("input")!.checked = this.item.selected;
             this.element.querySelector(`input`)!.addEventListener("click", () => prjState.changeSelectItem([this.item.id]));
         }else{
+            this.element.addEventListener('dragstart', this.dragStartHandler);
+            this.element.addEventListener('dragend', this.dragEndHandler);
             if (this.preSelected) {
                 this.element.classList.add("preSelected");
-                this.element.querySelector(".btn")!.addEventListener("click", () => statePreSelected.movePreChangeSelected(this.item.id));
+                this.element.addEventListener("click", () => statePreSelected.movePreChangeSelected(this.item.id));
             }else{
-                this.element.querySelector(".btn")!.addEventListener("click", () => statePreSelected.preChangeSelected(this.item.id));
+                this.element.addEventListener("click", () => statePreSelected.preChangeSelected(this.item.id));
             }
         }
     }
@@ -177,7 +198,7 @@ class ItemRender extends Component<HTMLUListElement, HTMLLIElement> {
     }
 }
 
-class PickList extends Component<HTMLDivElement, HTMLFormElement> {
+class PickList extends Component<HTMLDivElement, HTMLFormElement> implements DragTarget {
 
     isResponsive: boolean = false;
     widthResponsive: number = 450;
@@ -192,6 +213,7 @@ class PickList extends Component<HTMLDivElement, HTMLFormElement> {
     labelTri: string | string[] | null | undefined;
 
     title: string | null | undefined;
+    placeholderFilter: string | null | undefined;
 
     constructor(private type: 'available' | 'selected',
                 arrayLabel: OptionItem[],
@@ -199,7 +221,8 @@ class PickList extends Component<HTMLDivElement, HTMLFormElement> {
                     widthResponsive?: number,
                     labelTri?: string | string[] | null,
                     functionFilter?: Function | null,
-                    title?: string | null
+                    title?: string | null,
+                    placeholderFilter?: string | null
                 }
     ) {
         super('picklist', 'app', false, `${type}-section-picklist`);
@@ -209,6 +232,7 @@ class PickList extends Component<HTMLDivElement, HTMLFormElement> {
             this.labelTri = option.labelTri || null;
             this.functionFilter = option.functionFilter || null;
             this.title = option.title || null;
+            this.placeholderFilter = option.placeholderFilter || null;
         }
         this.configure();
         this.contentRender();
@@ -245,6 +269,9 @@ class PickList extends Component<HTMLDivElement, HTMLFormElement> {
     }
 
     configure(){
+        this.element.addEventListener('dragover', this.dragOverHandler);
+        this.element.addEventListener('dragleave', this.dragLeaveHandler);
+        this.element.addEventListener('drop', this.dropHandler);
         this.isResponsive = this.widthResponsive >= window.innerWidth;
         this.element.querySelector(".item-responsive .filter")!.addEventListener("change", this._handleFilter.bind(this));
         this.element.querySelector(".item .filter")!.addEventListener("change", this._handleFilter.bind(this));
@@ -278,6 +305,10 @@ class PickList extends Component<HTMLDivElement, HTMLFormElement> {
             this.element.querySelector(".item")!.classList.remove("isHidden");
             this.element.querySelector(".item-responsive")!.classList.add("isHidden");
             this.element.querySelector('.item ul')!.id = `${this.type}-picklist`;
+
+            const filter = this.element.querySelector(".item .filter") as HTMLInputElement;
+            filter.placeholder = this.placeholderFilter || "Example: Lavabo";
+
             const h2 = this.element.querySelector('.item h2') as HTMLHeadingElement;
             h2.innerText = this.title ? this.title : `${this.type.toUpperCase()} ITEM`;
             this.element.querySelector(".item .btn")!.addEventListener("click", () => {
@@ -290,6 +321,9 @@ class PickList extends Component<HTMLDivElement, HTMLFormElement> {
             });
             this.itemsRender();
         }else if (this.type === 'available') {
+            const filter = this.element.querySelector(".item-responsive .filter") as HTMLInputElement;
+            filter.placeholder = this.placeholderFilter || "Example: Lavabo";
+
             this.arrayDataFiltered = this.arrayData;
             this.element.querySelector(".item")!.classList.add("isHidden");
             this.element.querySelector(".item-responsive")!.classList.remove("isHidden");
@@ -320,6 +354,22 @@ class PickList extends Component<HTMLDivElement, HTMLFormElement> {
             }
         }
     }
+
+    dragOverHandler = (event: DragEvent) => {
+        if (event.dataTransfer && event.dataTransfer.types[0] === 'text/plain') {
+            event.preventDefault();
+            const listEl = this.element.querySelector('ul')!;
+            listEl.classList.add('droppable');
+        }
+    }
+    dropHandler = (event: DragEvent) => {
+        const prjId = event.dataTransfer!.getData('text/plain');
+        prjState.changeSelectItem([+prjId]);
+    }
+    dragLeaveHandler = (_: DragEvent) => {
+        const listEl = this.element.querySelector('ul')!;
+        listEl.classList.remove('droppable');
+    }
 }
 
 
@@ -338,7 +388,8 @@ let ArrayLabel: OptionItem[] = [
 let option = {
     labelTri: ["people","title"],
     title: "fez",
-    widthResponsive: 900
+    widthResponsive: 900,
+    placeholderFilter: "Test"
 }
 
 let option2 = {
